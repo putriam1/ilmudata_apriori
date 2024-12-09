@@ -33,7 +33,7 @@
                 <select name="missing_data" id="missing_data" class="form-select">
                     <option value="drop">Hapus Baris dengan Missing Data</option>
                     <option value="fill_0">Ganti Missing Data dengan 0</option>
-                    <option value="fill_mean">Ganti Missing Data dengan Rata-rata</option>
+                    <option value="fill_mean">Ganti Missing Data dengan Modus</option>
                 </select>
             </div>
 
@@ -45,11 +45,19 @@
         <!-- Tampilkan hasil pra-pemrosesan setelah upload -->
         {% if preprocessed_data %}
             <h2 class="mt-5">Hasil Pra-Pemrosesan</h2>
-            <!-- <pre>{{ preprocessed_data }}</pre> -->
             <div>{{ preprocessed_data | safe }}</div>
 
-            <!-- Tombol untuk melanjutkan ke proses Apriori -->
-            <form method="POST" action="{{ url_for('apriori') }}">
+            <!-- Form untuk input minimum support dan confidence -->
+            <h3 class="mt-5">Input Parameter Apriori</h3>
+            <form method="POST" action="{{ url_for('apriori_analysis') }}">
+                <div class="mb-3">
+                    <label for="min_support" class="form-label">Minimum Support</label>
+                    <input type="number" name="min_support" id="min_support" class="form-control" step="0.01" min="0" max="1" placeholder="e.g., 0.1" required>
+                </div>
+                <div class="mb-3">
+                    <label for="min_confidence" class="form-label">Minimum Confidence</label>
+                    <input type="number" name="min_confidence" id="min_confidence" class="form-control" step="0.01" min="0" max="1" placeholder="e.g., 0.5" required>
+                </div>
                 <button type="submit" class="btn btn-success">Proses Apriori</button>
             </form>
         {% endif %}
