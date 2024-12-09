@@ -2,127 +2,93 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 import pandas as pd
 from mlxtend.frequent_patterns import apriori, association_rules
 import os
-import uuid
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Change this to a secure key
+app.secret_key = 'your_secret_key'
+UPLOAD_FOLDER = 'static/uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-# Folder paths
-UPLOAD_FOLDER = 'static/uploads/'
-PROCESSED_FOLDER = 'static/uploads/processed/'
-
-# Ensure processed folder exists
-os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+# Buat folder untuk upload jika belum ada
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 
 @app.route('/', methods=['GET', 'POST'])
-def index():
+def upload_and_preprocess():
+    preprocessed_data = None
+    processed_filename = None
+
     if request.method == 'POST':
-        file = request.files.get('file')
-        missing_data = request.form.get('missing_data')
+        # Ambil file CSV dari form
+        file = request.files['file']
+        missing_data_method = request.form['missing_data']
 
         if file and file.filename.endswith('.csv'):
-            # Generate a unique filename to prevent overwriting
-            filename = f"{UPLOAD_FOLDER}{uuid.uuid4()}_{file.filename}"
-            file.save(filename)
-            
-            # Read the CSV file
-            try:
-                df = pd.read_csv(filename)
-            except Exception as e:
-                flash(f"Error reading the CSV file: {e}")
-                return redirect(url_for('index'))
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
+            file.save(filepath)
 
-            # Handle missing data
-            if missing_data == 'drop':
-                df = df.dropna()
-            elif missing_data == 'fill_0':
-                df = df.fillna(0)
-            elif missing_data == 'fill_mode':
-                df = df.apply(lambda x: x.fillna(x.mode()[0]), axis=0)
+            # Baca dataset
+            df = pd.read_csv(filepath)
 
-            # Create a column 'items' that contains a list of items
-            df['items'] = df.apply(lambda row: row.dropna().tolist(), axis=1)
+            # Tangani missing value
+            if missing_data_method == 'drop':
+                df.dropna(inplace=True)
+            elif missing_data_method == 'fill_0':
+                df.fillna(0, inplace=True)
+            elif missing_data_method == 'fill_mode':
+                df.fillna(df.mode().iloc[0], inplace=True)
 
-            # Save processed data in the 'processed' folder
-            processed_filename = f"{PROCESSED_FOLDER}{uuid.uuid4()}_processed_{file.filename}"
-            df.to_csv(processed_filename, index=False)
+            # Membuat list untuk setiap baris
+            transactions = df.apply(lambda row: row.dropna().tolist(), axis=1).tolist()
 
-            # Pass processed data and filename to the template
-            return render_template('index.html', preprocessed_data=df.to_html(classes='table table-bordered'), processed_filename=processed_filename)
+            # Simpan hasil pra-pemrosesan
+            processed_filename = f"processed_{file.filename}"
+            processed_path = os.path.join(app.config['UPLOAD_FOLDER'], processed_filename)
+            df.to_csv(processed_path, index=False)
 
+            # Tampilkan data transaksi dalam format list
+            transactions_display = [', '.join(map(str, transaction)) for transaction in transactions]
+            preprocessed_data = df.to_html(classes='table table-striped table-bordered', justify='center')
+            return render_template('index.html', preprocessed_data=preprocessed_data, processed_filename=processed_filename, transactions_display=transactions_display)
+
+            flash('File berhasil diunggah dan diproses!', 'success')
         else:
-            flash("Please upload a valid CSV file.")
-            return redirect(url_for('index'))
+            flash('Harap unggah file CSV yang valid!', 'danger')
 
-    return render_template('index.html')
+    return render_template('index.html', preprocessed_data=preprocessed_data, processed_filename=processed_filename)
 
-@app.route('/apriori_analysis', methods=['POST'])
+@app.route('/apriori-analysis', methods=['POST'])
 def apriori_analysis():
-    # Retrieve parameters from the form
-    min_support_str = request.form.get('min_support')
-    min_confidence_str = request.form.get('min_confidence')
-    k_value = request.form.get('k_value')  # This should be validated to ensure it's a valid integer
-    specific_item_str = request.form.get('specific_item', '[]')  # Default to an empty list if not provided
+    min_support = float(request.form['min_support'])
+    min_confidence = float(request.form['min_confidence'])
+    k_value = int(request.form['k_value'])
+    specific_item = eval(request.form['specific_item'])
+    processed_filename = request.form['processed_filename']
 
-    # Ensure min_support and min_confidence are valid floats
-    if not min_support_str or not min_confidence_str:
-        flash("Please fill in both Minimum Support and Minimum Confidence.")
-        return redirect(url_for('index'))
+    # Baca file yang sudah diproses
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], processed_filename)
+    df = pd.read_csv(filepath)
 
-    try:
-        min_support = float(min_support_str)
-        min_confidence = float(min_confidence_str)
-    except ValueError:
-        flash("Minimum Support and Minimum Confidence must be valid numbers.")
-        return redirect(url_for('index'))
+    # Gabungkan semua kolom gejala menjadi transaksi
+    transactions = df.apply(lambda row: row.dropna().tolist(), axis=1).tolist()
+    
+    # Konversi transaksi ke format one-hot encoding
+    encoded_data = pd.get_dummies(pd.DataFrame(transactions).stack()).groupby(level=0).sum()
 
-    # Ensure k_value is a valid integer
-    try:
-        k_value = int(k_value)
-    except ValueError:
-        flash("Frequent Itemset K (Jumlah Item) must be a valid integer.")
-        return redirect(url_for('index'))
+    # Jalankan algoritma apriori
+    frequent_itemsets = apriori(encoded_data, min_support=min_support, use_colnames=True)
 
-    # Convert the specific_item string to a list
-    try:
-        specific_item = eval(specific_item_str)  # Convert string to list (default is [])
-        if not isinstance(specific_item, list):
-            raise ValueError
-    except (ValueError, SyntaxError):
-        flash("Specific Item must be a valid list (e.g., ['item1', 'item2']).")
-        return redirect(url_for('index'))
+    # Pastikan itemsets yang memenuhi k_value
+    frequent_itemsets = frequent_itemsets[frequent_itemsets['itemsets'].apply(lambda x: len(x) == k_value)]
 
-    processed_filename = request.form.get('processed_filename')
+    # Filter berdasarkan item tertentu (gunakan set untuk mencocokkan item)
+    frequent_itemsets = frequent_itemsets[frequent_itemsets['itemsets'].apply(lambda x: set(specific_item).issubset(x))]
 
-    if not processed_filename:
-        flash("Processed file path is missing!")
-        return redirect(url_for('index'))
+    # Buat aturan asosiasi dengan support_only=True jika masalah 'frozenset' muncul
+    rules = association_rules(frequent_itemsets, metric='confidence', min_threshold=min_confidence, support_only=True, num_itemsets=len(frequent_itemsets))
 
-    try:
-        # Load preprocessed data
-        df = pd.read_csv(processed_filename)
-    except Exception as e:
-        flash(f"Error loading the processed CSV file: {e}")
-        return redirect(url_for('index'))
+    apriori_results = rules.to_html(classes='table table-striped table-bordered', justify='center')
 
-    # Prepare transactions (items)
-    transactions = df['items'].tolist()
-
-    # Convert transactions to one-hot encoded DataFrame
-    transactions_encoded = pd.get_dummies(pd.DataFrame(transactions), prefix='', prefix_sep='')
-
-    # Run Apriori algorithm
-    frequent_itemsets = apriori(transactions_encoded, min_support=min_support, use_colnames=True)
-    apriori_results = association_rules(frequent_itemsets, metric="confidence", min_threshold=min_confidence, num_itemsets=len(frequent_itemsets))
-
-    # Filter results if specific_item is provided
-    if specific_item:
-        apriori_results = apriori_results[apriori_results['antecedents'].apply(lambda x: all(item in x for item in specific_item))]
-
-    # Convert results to HTML
-    apriori_results_html = apriori_results.to_html(classes='table table-bordered')
-
-    return render_template('index.html', apriori_results=apriori_results_html)
+    return render_template('index.html', apriori_results=apriori_results)
 
 if __name__ == '__main__':
     app.run(debug=True)
