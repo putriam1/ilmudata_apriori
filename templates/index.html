@@ -3,35 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apriori Analysis</title>
+    <title>Pra-Pemrosesan Data dan Apriori</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
 <body>
     <div class="container mt-5">
-        <h1 class="text-center">Apriori Analysis</h1>
-        <form method="POST" enctype="multipart/form-data" class="mt-4">
+        <h1>Pra-Pemrosesan Data dan Analisis Apriori</h1>
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div>
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Form untuk mengunggah file CSV dan pra-pemrosesan -->
+        <form method="POST" enctype="multipart/form-data">
             <div class="mb-3">
-                <label for="fileInput" class="form-label">Upload CSV File:</label>
-                <input type="file" class="form-control" id="fileInput" name="file" required>
+                <label for="file" class="form-label">Upload File CSV</label>
+                <input type="file" name="file" id="file" class="form-control" required>
             </div>
+            
             <div class="mb-3">
-                <label for="minSupport" class="form-label">Min Support:</label>
-                <input type="number" class="form-control" id="minSupport" name="min_support" step="0.01" min="0" max="1" value="0.5">
+                <label for="missing_data" class="form-label">Cara Menangani Missing Data</label>
+                <select name="missing_data" id="missing_data" class="form-select">
+                    <option value="drop">Hapus Baris dengan Missing Data</option>
+                    <option value="fill_0">Ganti Missing Data dengan 0</option>
+                    <option value="fill_mean">Ganti Missing Data dengan Rata-rata</option>
+                </select>
             </div>
+
             <div class="mb-3">
-                <label for="minConfidence" class="form-label">Min Confidence:</label>
-                <input type="number" class="form-control" id="minConfidence" name="min_confidence" step="0.01" min="0" max="1" value="0.5">
+                <button type="submit" class="btn btn-primary">Proses</button>
             </div>
-            <button type="submit" class="btn btn-primary">Proses</button>
         </form>
 
-        {% if results %}
-        <div class="mt-4">
-            <h3>Hasil Apriori:</h3>
-            <div class="table-responsive">
-                {{ results|safe }}
-            </div>
-        </div>
+        <!-- Tampilkan hasil pra-pemrosesan setelah upload -->
+        {% if preprocessed_data %}
+            <h2 class="mt-5">Hasil Pra-Pemrosesan</h2>
+            <!-- <pre>{{ preprocessed_data }}</pre> -->
+            <div>{{ preprocessed_data | safe }}</div>
+
+            <!-- Tombol untuk melanjutkan ke proses Apriori -->
+            <form method="POST" action="{{ url_for('apriori') }}">
+                <button type="submit" class="btn btn-success">Proses Apriori</button>
+            </form>
         {% endif %}
     </div>
 </body>
