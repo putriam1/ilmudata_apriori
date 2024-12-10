@@ -1,113 +1,95 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pra-Pemrosesan Data dan Analisis Apriori</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <title>Apriori Analysis</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 </head>
 <body>
     <div class="container mt-5">
-        <h1 class="text-center mb-4">Pra-Pemrosesan Data dan Analisis Apriori</h1>
+        <h1 class="mb-4">Unggah Dataset CSV</h1>
 
-        <!-- Flash messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                <div class="mb-3">
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-
-        <!-- Form untuk mengunggah file CSV dan pra-pemrosesan -->
-        <form method="POST" enctype="multipart/form-data" class="mb-4">
-            <div class="mb-3">
-                <label for="file" class="form-label">Upload File CSV</label>
-                <input type="file" name="file" id="file" class="form-control" required>
+        <!-- Form untuk unggah file CSV dan penanganan missing value -->
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="file">Pilih File CSV</label>
+                <input type="file" class="form-control" name="file" id="file" required>
             </div>
-            
-            <div class="mb-3">
-                <label for="missing_data" class="form-label">Cara Menangani Missing Data</label>
-                <select name="missing_data" id="missing_data" class="form-select">
-                    <option value="drop">Hapus Baris dengan Missing Data</option>
-                    <option value="fill_0">Ganti Missing Data dengan 0</option>
-                    <option value="fill_mode">Ganti Missing Data dengan Modus</option>
+
+            <div class="form-group">
+                <label for="missing_data">Penanganan Missing Value</label>
+                <select class="form-control" name="missing_data" id="missing_data">
+                    <option value="drop">Hapus Missing Value</option>
+                    <option value="fill_0">Isi dengan 0</option>
+                    <option value="fill_mode">Isi dengan Mode</option>
                 </select>
             </div>
 
-            <button type="submit" class="btn btn-primary w-100">Proses Data</button>
+            <button type="submit" class="btn btn-primary">Unggah dan Proses</button>
         </form>
 
-        <!-- Tampilkan hasil pra-pemrosesan setelah upload -->
+        <hr>
+
+        <!-- Form untuk parameter analisis Apriori -->
+        {% if processed_filename %}
+            <h2 class="mt-4">Parameter Apriori Analysis</h2>
+            <form method="POST" action="{{ url_for('apriori_analysis') }}">
+                <input type="hidden" name="processed_filename" value="{{ processed_filename }}">
+
+                <div class="form-group">
+                    <label for="min_support">Minimum Support</label>
+                    <input type="number" step="0.01" class="form-control" name="min_support" id="min_support" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="min_confidence">Minimum Confidence</label>
+                    <input type="number" step="0.01" class="form-control" name="min_confidence" id="min_confidence" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="k_value">Jumlah Item (k)</label>
+                    <input type="number" class="form-control" name="k_value" id="k_value" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="specific_item">Item Spesifik (format: ['item1', 'item2'])</label>
+                    <input type="text" class="form-control" name="specific_item" id="specific_item" required>
+                </div>
+
+                <button type="submit" class="btn btn-success">Jalankan Analisis Apriori</button>
+            </form>
+        {% endif %}
+
+        <hr>
+
+        <!-- Tampilkan pesan flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} mt-3">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Tampilkan hasil pra-pemrosesan -->
         {% if preprocessed_data %}
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="card-title">Hasil Pra-Pemrosesan</h5>
-                </div>
-                <div class="card-body table-responsive">
-                    <div>{{ preprocessed_data | safe }}</div>
-                </div>
-            </div>
-
-            <!-- Form untuk input parameter Apriori -->
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="card-title">Input Parameter Apriori</h5>
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ url_for('apriori_analysis') }}">
-                        <input type="hidden" name="processed_filename" value="{{ processed_filename }}">
-                        
-                        <!-- Input Minimum Support -->
-                        <div class="mb-3">
-                            <label for="min_support" class="form-label">Minimum Support</label>
-                            <input type="number" name="min_support" id="min_support" class="form-control" step="any" min="0" max="1" placeholder="e.g., 0.1" required>
-                        </div>
-                        
-                        <!-- Input Minimum Confidence -->
-                        <div class="mb-3">
-                            <label for="min_confidence" class="form-label">Minimum Confidence</label>
-                            <input type="number" name="min_confidence" id="min_confidence" class="form-control" step="any" min="0" max="1" placeholder="e.g., 0.5" required>
-                        </div>
-                        
-                        <!-- Input K Berapa -->
-                        <div class="mb-3">
-                            <label for="k_value" class="form-label">Frequent Itemset K (Jumlah Item)</label>
-                            <input type="number" name="k_value" id="k_value" class="form-control" min="1" placeholder="e.g., 2" required>
-                        </div>
-                        
-                        <!-- Input Isi Item -->
-                        <div class="mb-3">
-                            <label for="specific_item" class="form-label">Item untuk Proses Apriori</label>
-                            <input type="text" name="specific_item" id="specific_item" class="form-control" placeholder="e.g., ['item1', 'item2']" required>
-                            <small class="form-text text-muted">Masukkan item dalam format list, seperti <code>['item1', 'item2']</code>.</small>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary w-100">Proses Apriori</button>
-                    </form>
-                </div>
+            <h2 class="mt-4">Data yang Telah Diproses</h2>
+            <div class="table-responsive">
+                {{ preprocessed_data|safe }}
             </div>
         {% endif %}
 
-        <!-- Tampilkan hasil analisis Apriori -->
+        <!-- Tampilkan hasil Apriori -->
         {% if apriori_results %}
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="card-title">Hasil Analisis Apriori</h5>
-                </div>
-                <div class="card-body table-responsive">
-                    <div>{{ apriori_results | safe }}</div>
-                </div>
+            <h2 class="mt-4">Hasil Apriori Analysis</h2>
+            <div class="table-responsive">
+                {{ apriori_results|safe }}
             </div>
         {% endif %}
     </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </body>
 </html>
