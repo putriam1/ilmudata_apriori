@@ -74,9 +74,11 @@ def apriori_page():
     processed_filename = request.args.get('processed_filename')
     return render_template('apriori.html', processed_filename=processed_filename)
 
+
 @app.route('/apriori-analysis', methods=['POST'])
 def apriori_analysis():
     try:
+        # Mendapatkan parameter dari form
         min_support = float(request.form['min_support'])
         min_confidence = float(request.form['min_confidence'])
         lhs_length = int(request.form['lhs_length'])
@@ -102,7 +104,8 @@ def apriori_analysis():
         # Menghasilkan aturan asosiasi
         num_itemsets = frequent_itemsets['support'].count()  # Hitung jumlah itemset
         rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=min_confidence, num_itemsets=num_itemsets)
-        
+
+
         if rules.empty:
             return jsonify({"error": "Tidak ada aturan asosiasi yang ditemukan. Coba turunkan nilai min_confidence."})
 
@@ -114,8 +117,11 @@ def apriori_analysis():
 
         # Filter aturan berdasarkan search_item jika diberikan
         if search_item:
+            search_item = search_item.strip()  # Pastikan input bersih
             rules = rules[rules['antecedents'].apply(lambda x: search_item in list(x))]
 
+        if rules.empty:
+            return jsonify({"error": f"Tidak ada aturan asosiasi dengan item '{search_item}' dalam antecedents."})
         # Konversi hasil ke dalam tabel HTML
         frequent_itemsets_html = frequent_itemsets.to_html(classes='table table-bordered')
         rules_html = rules.to_html(classes='table table-bordered')
@@ -126,6 +132,7 @@ def apriori_analysis():
         return jsonify({"error": f"KeyError: {str(e)} - Periksa apakah semua parameter yang dibutuhkan sudah dikirimkan."})
     except Exception as e:
         return jsonify({"error": str(e)})
+
 
 if __name__ == '__main__':
     app.run(debug=True)
