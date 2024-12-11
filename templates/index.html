@@ -1,95 +1,49 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Apriori Analysis</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
 <body>
     <div class="container mt-5">
-        <h1 class="mb-4">Unggah Dataset CSV</h1>
-
-        <!-- Form untuk unggah file CSV dan penanganan missing value -->
-        <form method="POST" enctype="multipart/form-data">
-            <div class="form-group">
-                <label for="file">Pilih File CSV</label>
-                <input type="file" class="form-control" name="file" id="file" required>
+        <h1 class="text-center">Apriori Algorithm Analysis</h1>
+        <form id="aprioriForm" action="/process" method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="fileUpload" class="form-label">Upload Dataset (CSV)</label>
+                <input type="file" class="form-control" id="fileUpload" name="file" accept=".csv" required>
             </div>
-
-            <div class="form-group">
-                <label for="missing_data">Penanganan Missing Value</label>
-                <select class="form-control" name="missing_data" id="missing_data">
-                    <option value="drop">Hapus Missing Value</option>
-                    <option value="fill_0">Isi dengan 0</option>
-                    <option value="fill_mode">Isi dengan Mode</option>
-                </select>
+            <div class="row">
+                <div class="col-md-4">
+                    <label for="minSupport" class="form-label">Min Support</label>
+                    <input type="number" step="0.01" class="form-control" id="minSupport" name="min_support" placeholder="e.g., 0.5" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="minConfidence" class="form-label">Min Confidence</label>
+                    <input type="number" step="0.01" class="form-control" id="minConfidence" name="min_confidence" placeholder="e.g., 0.7" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="kValue" class="form-label">K Value</label>
+                    <input type="number" class="form-control" id="kValue" name="k_value" placeholder="e.g., 2" required>
+                </div>
             </div>
-
-            <button type="submit" class="btn btn-primary">Unggah dan Proses</button>
+            <div class="mb-3 mt-3">
+                <label for="searchItem" class="form-label">Search Item</label>
+                <input type="text" class="form-control" id="searchItem" name="search_item" placeholder="e.g., Milk">
+            </div>
+            <button type="submit" class="btn btn-primary">Analyze</button>
         </form>
 
-        <hr>
-
-        <!-- Form untuk parameter analisis Apriori -->
-        {% if processed_filename %}
-            <h2 class="mt-4">Parameter Apriori Analysis</h2>
-            <form method="POST" action="{{ url_for('apriori_analysis') }}">
-                <input type="hidden" name="processed_filename" value="{{ processed_filename }}">
-
-                <div class="form-group">
-                    <label for="min_support">Minimum Support</label>
-                    <input type="number" step="0.01" class="form-control" name="min_support" id="min_support" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="min_confidence">Minimum Confidence</label>
-                    <input type="number" step="0.01" class="form-control" name="min_confidence" id="min_confidence" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="k_value">Jumlah Item (k)</label>
-                    <input type="number" class="form-control" name="k_value" id="k_value" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="specific_item">Item Spesifik (format: ['item1', 'item2'])</label>
-                    <input type="text" class="form-control" name="specific_item" id="specific_item" required>
-                </div>
-
-                <button type="submit" class="btn btn-success">Jalankan Analisis Apriori</button>
-            </form>
-        {% endif %}
-
-        <hr>
-
-        <!-- Tampilkan pesan flash -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} mt-3">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-
-        <!-- Tampilkan hasil pra-pemrosesan -->
-        {% if preprocessed_data %}
-            <h2 class="mt-4">Data yang Telah Diproses</h2>
-            <div class="table-responsive">
-                {{ preprocessed_data|safe }}
-            </div>
-        {% endif %}
-
-        <!-- Tampilkan hasil Apriori -->
-        {% if apriori_results %}
-            <h2 class="mt-4">Hasil Apriori Analysis</h2>
-            <div class="table-responsive">
-                {{ apriori_results|safe }}
-            </div>
-        {% endif %}
+        <div id="results" class="mt-5">
+            <!-- Results will be displayed here -->
+        </div>
     </div>
-
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.getElementById('aprioriForm').onsubmit = function(e) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>Processing... Please wait.</p>';
+        };
+    </script>
 </body>
 </html>
