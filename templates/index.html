@@ -1,50 +1,165 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apriori Analysis</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <title>Unggah Dataset CSV</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            background-color: #f4f6f9;
+            font-family: 'Arial', sans-serif;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+            margin-top: 50px;
+            text-align: center;
+        }
+        h1 {
+            color: #007bff;
+        }
+        .btn-option {
+            width: 220px;
+            height: 60px;
+            font-size: 18px;
+            margin: 10px;
+            color: #fff;
+            border: none;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-option i {
+            margin-right: 10px;
+            font-size: 24px;
+        }
+        .btn-preprocess {
+            background-color: #28a745;
+        }
+        .btn-apriori {
+            background-color: #17a2b8;
+        }
+        .btn-option:hover {
+            transform: scale(1.05);
+        }
+        .form-section {
+            display: none;
+            margin-top: 30px;
+        }
+        .custom-file-input {
+            cursor: pointer;
+        }
+        .custom-file-label {
+            font-size: 16px;
+            font-weight: 500;
+        }
+    </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <h1 class="text-center">Apriori Algorithm Analysis</h1>
-        <form id="aprioriForm" action="/process" method="POST" enctype="multipart/form-data">
-            <div class="mb-3">
-                <label for="fileUpload" class="form-label">Upload Dataset (CSV)</label>
-                <input type="file" class="form-control" id="fileUpload" name="file" accept=".csv" required>
-            </div>
-            <div class="row">
-                <div class="col-md-4">
-                    <label for="minSupport" class="form-label">Min Support</label>
-                    <input type="number" step="0.01" class="form-control" id="minSupport" name="min_support" placeholder="e.g., 0.5" required>
+    <div class="container">
+        <h1 class="mb-4">Unggah Dataset CSV</h1>
+        
+        <p class="lead">Pilih proses yang ingin dilakukan:</p>
+
+        <!-- Tombol Pilihan Proses dengan Ikon -->
+        <div class="d-flex justify-content-center">
+            <button class="btn btn-option btn-preprocess" id="btn_preprocess">
+                <i class="fas fa-cogs"></i> Praproses Data
+            </button>
+            <button class="btn btn-option btn-apriori" id="btn_apriori">
+                <i class="fas fa-chart-line"></i> Analisis Apriori
+            </button>
+        </div>
+
+        <!-- Form untuk unggah file dan praproses -->
+        <form method="POST" enctype="multipart/form-data" id="preprocess_form" class="form-section">
+            <h3 class="mb-3 text-success">Form Praproses Data</h3>
+            <div class="form-group">
+                <div class="custom-file">
+                    <input type="file" class="custom-file-input" name="file" id="file" accept=".csv" required>
+                    <label class="custom-file-label" for="file">Pilih file CSV...</label>
                 </div>
-                <div class="col-md-4">
-                    <label for="minConfidence" class="form-label">Min Confidence</label>
-                    <input type="number" step="0.01" class="form-control" id="minConfidence" name="min_confidence" placeholder="e.g., 0.7" required>
-                </div>
-                <div class="col-md-4">
-                    <label for="lhs_length" class="form-label">MLHS Length:</label>
-                    <input type="number" step="0.01" class="form-control" id="minConfidence" name="lhs_length" placeholder="e.g., 1" required>
-                </div>
-                
             </div>
-            <div class="mb-3 mt-3">
-                <label for="searchItem" class="form-label">Search Item</label>
-                <input type="text" class="form-control" id="searchItem" name="search_item" placeholder="e.g., Milk">
+
+            <div class="form-group">
+                <label for="missing_data">Penanganan Missing Value</label>
+                <select class="form-control" name="missing_data" id="missing_data">
+                    <option value="drop">Hapus Missing Value</option>
+                    <option value="fill_0">Isi dengan 0</option>
+                    <option value="fill_mode">Isi dengan Mode</option>
+                </select>
             </div>
-            <button type="submit" class="btn btn-primary">Analyze</button>
+
+            <button type="submit" class="btn btn-success btn-block">
+                <i class="fas fa-upload"></i> Unggah dan Praproses
+            </button>
         </form>
 
-        <div id="results" class="mt-5">
-            <!-- Results will be displayed here -->
-        </div>
+        <!-- Form untuk langsung analisis apriori -->
+        <form method="POST" enctype="multipart/form-data" id="apriori_form" class="form-section">
+            <h3 class="mb-3 text-info">Form Analisis Apriori</h3>
+            <div class="form-group">
+                <div class="custom-file">
+                    <input type="file" class="custom-file-input" name="file" id="apriori_file" accept=".csv" required>
+                    <label class="custom-file-label" for="apriori_file">Pilih file CSV...</label>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-info btn-block">
+                <i class="fas fa-play"></i> Unggah dan Jalankan Analisis Apriori
+            </button>
+        </form>
+
+        <!-- Menampilkan data yang telah diproses -->
+        {% if preprocessed_data %}
+            <h2 class="mt-4 text-center">Data yang Telah Diproses</h2>
+            <div class="text-center">
+                <a href="{{ url_for('apriori_page', processed_filename=processed_filename) }}" class="btn btn-success mt-4">
+                    Lanjut ke Analisis Apriori
+                </a>
+            </div>
+            <div class="table-responsive mt-3">
+                {{ preprocessed_data|safe }}
+            </div>
+        {% endif %}
+
+        <!-- Tampilkan pesan flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} mt-3">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
     </div>
+
     <script>
-        document.getElementById('aprioriForm').onsubmit = function(e) {
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = '<p>Processing... Please wait.</p>';
-        };
+        // Menampilkan form berdasarkan tombol yang diklik
+        document.getElementById('btn_preprocess').addEventListener('click', function() {
+            document.getElementById('preprocess_form').style.display = 'block';
+            document.getElementById('apriori_form').style.display = 'none';
+        });
+
+        document.getElementById('btn_apriori').addEventListener('click', function() {
+            document.getElementById('apriori_form').style.display = 'block';
+            document.getElementById('preprocess_form').style.display = 'none';
+        });
+
+        // Mengupdate label file dengan nama file yang dipilih
+        document.querySelectorAll('.custom-file-input').forEach(input => {
+            input.addEventListener('change', function() {
+                const fileName = this.files[0] ? this.files[0].name : 'Pilih file CSV...';
+                this.nextElementSibling.innerHTML = fileName;
+            });
+        });
     </script>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
