@@ -11,45 +11,50 @@ def home():
 @app.route('/process', methods=['POST'])
 def process():
     try:
-        # Retrieve form data
+        # Ambil data dari form
         file = request.files['file']
         min_support = float(request.form['min_support'])
         min_confidence = float(request.form['min_confidence'])
-        k_value = int(request.form['k_value'])
+        lhs_length = int(request.form['lhs_length'])  # Mengganti k_value dengan lhs_length
         search_item = request.form.get('search_item', None)
 
-        # Load dataset
+        # Membaca dataset
         data = pd.read_csv(file)
         data['Aktivitas'] = data['Aktivitas'].str.split(', ')
         transactions = data['Aktivitas']
 
-        # Convert transactional data to one-hot encoding
+        # Konversi data transaksi ke dalam bentuk one-hot encoding
         one_hot = pd.get_dummies(transactions.apply(pd.Series).stack()).groupby(level=0).sum()
         one_hot = one_hot.astype(bool)
 
-        # Apply Apriori algorithm
-        frequent_itemsets = apriori(one_hot, min_support=min_support, use_colnames=True, max_len=k_value)
+        # Menerapkan algoritma Apriori
+        frequent_itemsets = apriori(one_hot, min_support=min_support, use_colnames=True)
 
         if frequent_itemsets.empty:
-            return jsonify({"error": "No frequent itemsets found. Try lowering the min_support value."})
+            return jsonify({"error": "Tidak ada itemset yang sering ditemukan. Coba turunkan nilai min_support."})
 
-        # Generate association rules
+         # Menghasilkan aturan asosiasi
         num_itemsets = frequent_itemsets['support'].count()  # Hitung jumlah itemset
         rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=min_confidence, num_itemsets=num_itemsets)
-# rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=min_confidence)
+        
+        if rules.empty:
+            return jsonify({"error": "Tidak ada aturan asosiasi yang ditemukan. Coba turunkan nilai min_confidence."})
+
+        # Filter aturan berdasarkan panjang LHS
+        rules = rules[rules['antecedents'].apply(lambda x: len(x) == lhs_length)]
 
         if rules.empty:
-            return jsonify({"error": "No association rules found. Try lowering the min_confidence value."})
+            return jsonify({"error": f"Tidak ada aturan asosiasi dengan panjang LHS {lhs_length}."})
 
-        # Filter rules by search_item if provided
+        # Filter aturan berdasarkan search_item jika diberikan
         if search_item:
             rules = rules[rules['antecedents'].apply(lambda x: search_item in list(x))]
 
-        # Convert results to HTML tables
+        # Konversi hasil ke dalam tabel HTML
         frequent_itemsets_html = frequent_itemsets.to_html(classes='table table-bordered')
         rules_html = rules.to_html(classes='table table-bordered')
 
-        # Return results
+        # Mengembalikan hasil
         return f"<h3>Frequent Itemsets</h3>{frequent_itemsets_html}<h3>Association Rules</h3>{rules_html}"
 
     except Exception as e:
