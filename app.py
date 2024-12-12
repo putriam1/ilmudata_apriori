@@ -82,7 +82,7 @@ def apriori_analysis():
         min_support = float(request.form['min_support'])
         min_confidence = float(request.form['min_confidence'])
         lhs_length = int(request.form['lhs_length'])
-        search_item = request.form.get('search_item', None)
+        search_item = request.form.get('specific_item', None)
         processed_filename = request.form['processed_filename']
         processed_path = os.path.join(app.config['PROCESSED_FOLDER'], processed_filename)
 
@@ -105,7 +105,6 @@ def apriori_analysis():
         num_itemsets = frequent_itemsets['support'].count()  # Hitung jumlah itemset
         rules = association_rules(frequent_itemsets, metric="confidence", min_threshold=min_confidence, num_itemsets=num_itemsets)
 
-
         if rules.empty:
             return jsonify({"error": "Tidak ada aturan asosiasi yang ditemukan. Coba turunkan nilai min_confidence."})
 
@@ -117,11 +116,8 @@ def apriori_analysis():
 
         # Filter aturan berdasarkan search_item jika diberikan
         if search_item:
-            search_item = search_item.strip()  # Pastikan input bersih
             rules = rules[rules['antecedents'].apply(lambda x: search_item in list(x))]
 
-        if rules.empty:
-            return jsonify({"error": f"Tidak ada aturan asosiasi dengan item '{search_item}' dalam antecedents."})
         # Konversi hasil ke dalam tabel HTML
         frequent_itemsets_html = frequent_itemsets.to_html(classes='table table-bordered')
         rules_html = rules.to_html(classes='table table-bordered')
